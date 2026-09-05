@@ -11,7 +11,12 @@
     <section class="card">
       <p class="eyebrow">Presentation Booking</p>
       <h1>Choose your presentation slot</h1>
-      <p class="intro">Enter your name and group number, then choose one available 20-minute slot. Once booked, the slot disappears for other groups.</p>
+      <p class="intro">Enter your name and group number, then choose one available 20-minute slot. Once a slot is booked, it is removed for the other groups.</p>
+
+      <div class="schedule-note" aria-label="Presentation dates">
+        <strong>Presentation dates</strong>
+        <span>7–8 September 2026 · 20 minutes per group</span>
+      </div>
 
       <form id="booking-form">
         <label>
@@ -31,7 +36,8 @@
         </label>
 
         <fieldset>
-          <legend>Available slots</legend>
+          <legend>Available presentation slots</legend>
+          <p class="slot-help">The date and full 20-minute time range are shown for every available slot.</p>
           <div id="slots" class="slots"><p class="muted">Loading available slots…</p></div>
         </fieldset>
 
