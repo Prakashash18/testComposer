@@ -1,7 +1,5 @@
 const SUPABASE_URL = 'https://qobfgevzgnluctagsybj.supabase.co';
-// The Supabase connector became unavailable before I could retrieve the DJI project's publishable key.
-// Replace this value with the DJI project's sb_publishable_... key once available.
-const SUPABASE_KEY = 'PASTE_DJI_PROJECT_PUBLISHABLE_KEY_HERE';
+const SUPABASE_KEY = 'sb_publishable_zhF0-KqttHXbpYDTDKbNxw_QV5mJHsh';
 
 const slotsEl = document.getElementById('slots');
 const form = document.getElementById('booking-form');
