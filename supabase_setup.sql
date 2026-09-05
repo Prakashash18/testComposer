@@ -1,6 +1,6 @@
 -- Presentation booking database setup for Supabase project DJI
 -- 11 groups, 11 x 20-minute slots, Singapore time.
--- Stores only student-entered name + group number.
+-- Stores student-entered name, email and group number.
 
 create extension if not exists pgcrypto;
 
@@ -18,10 +18,18 @@ create table if not exists public.presentation_bookings (
   slot_id bigint not null unique references public.presentation_slots(id) on delete restrict,
   group_no smallint not null unique,
   student_name text not null,
+  student_email text,
+  email_sent_at timestamptz,
+  email_message_id text,
   created_at timestamptz not null default now(),
   constraint presentation_bookings_group_range check (group_no between 1 and 11),
   constraint presentation_bookings_name_length check (char_length(trim(student_name)) between 2 and 120)
 );
+
+-- Safe when upgrading an earlier version of this table.
+alter table public.presentation_bookings add column if not exists student_email text;
+alter table public.presentation_bookings add column if not exists email_sent_at timestamptz;
+alter table public.presentation_bookings add column if not exists email_message_id text;
 
 create index if not exists presentation_slots_start_at_idx
   on public.presentation_slots(start_at);
@@ -32,6 +40,10 @@ alter table public.presentation_bookings enable row level security;
 -- Browser users cannot access the underlying tables directly.
 revoke all on table public.presentation_slots from anon, authenticated;
 revoke all on table public.presentation_bookings from anon, authenticated;
+
+-- The Edge Function uses the project's server-side secret/service role.
+grant select on table public.presentation_slots to service_role;
+grant select, update on table public.presentation_bookings to service_role;
 
 -- Keep exactly these 11 active slots.
 update public.presentation_slots set is_active = false;
@@ -73,10 +85,14 @@ as $$
   order by s.start_at;
 $$;
 
+-- Remove the older 3-argument function if this project was set up previously.
+drop function if exists public.book_presentation_slot(bigint, smallint, text);
+
 create or replace function public.book_presentation_slot(
   p_slot_id bigint,
   p_group_no smallint,
-  p_student_name text
+  p_student_name text,
+  p_student_email text
 )
 returns jsonb
 language plpgsql
@@ -85,8 +101,10 @@ set search_path = public, pg_temp
 as $$
 declare
   v_name text := trim(p_student_name);
+  v_email text := lower(trim(p_student_email));
   v_start timestamptz;
   v_end timestamptz;
+  v_booking_id uuid;
 begin
   if p_group_no is null or p_group_no < 1 or p_group_no > 11 then
     return jsonb_build_object(
@@ -101,6 +119,18 @@ begin
       'ok', false,
       'code', 'INVALID_NAME',
       'message', 'Please enter your name.'
+    );
+  end if;
+
+  if v_email is null
+     or char_length(v_email) < 5
+     or char_length(v_email) > 254
+     or position('@' in v_email) <= 1
+     or position('.' in split_part(v_email, '@', 2)) = 0 then
+    return jsonb_build_object(
+      'ok', false,
+      'code', 'INVALID_EMAIL',
+      'message', 'Please enter a valid email address.'
     );
   end if;
 
@@ -119,8 +149,9 @@ begin
   end if;
 
   begin
-    insert into public.presentation_bookings (slot_id, group_no, student_name)
-    values (p_slot_id, p_group_no, v_name);
+    insert into public.presentation_bookings (slot_id, group_no, student_name, student_email)
+    values (p_slot_id, p_group_no, v_name, v_email)
+    returning id into v_booking_id;
   exception
     when unique_violation then
       if exists (
@@ -146,6 +177,7 @@ begin
     'ok', true,
     'code', 'BOOKED',
     'message', 'Presentation slot booked successfully.',
+    'booking_id', v_booking_id,
     'group_no', p_group_no,
     'student_name', v_name,
     'start_at', v_start,
@@ -154,13 +186,14 @@ begin
 end;
 $$;
 
--- Functions are the only public API surface.
+-- Functions are the only public database API surface.
 revoke all on function public.get_available_presentation_slots() from public;
-revoke all on function public.book_presentation_slot(bigint, smallint, text) from public;
+revoke all on function public.book_presentation_slot(bigint, smallint, text, text) from public;
 
 grant execute on function public.get_available_presentation_slots() to anon, authenticated;
-grant execute on function public.book_presentation_slot(bigint, smallint, text) to anon, authenticated;
+grant execute on function public.book_presentation_slot(bigint, smallint, text, text) to anon, authenticated;
 
 -- Helpful verification queries:
 -- select * from public.get_available_presentation_slots();
 -- select count(*) as active_slots from public.presentation_slots where is_active = true;
+-- select id, group_no, student_name, student_email, email_sent_at from public.presentation_bookings order by created_at;
