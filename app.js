@@ -53,6 +53,21 @@ async function rpc(fn, body = {}) {
   return data;
 }
 
+async function invokeEdgeFunction(name, body = {}) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY
+    },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.message || data?.error || 'Email request failed');
+  return data;
+}
+
 async function loadSlots() {
   submitBtn.disabled = true;
   slotsEl.innerHTML = '<p class="muted">Loading available slots…</p>';
@@ -90,9 +105,10 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   const studentName = document.getElementById('student-name').value.trim();
+  const studentEmail = document.getElementById('student-email').value.trim().toLowerCase();
   const groupNo = Number(document.getElementById('group-no').value);
   const chosen = form.querySelector('input[name="slot_id"]:checked');
-  if (!studentName || !groupNo || !chosen) return;
+  if (!studentName || !studentEmail || !groupNo || !chosen) return;
 
   submitBtn.disabled = true;
   messageEl.className = 'message';
@@ -102,7 +118,8 @@ form.addEventListener('submit', async (event) => {
     const rawResult = await rpc('book_presentation_slot', {
       p_slot_id: Number(chosen.value),
       p_group_no: groupNo,
-      p_student_name: studentName
+      p_student_name: studentName,
+      p_student_email: studentEmail
     });
 
     const result = Array.isArray(rawResult) ? rawResult[0] : rawResult;
@@ -111,10 +128,29 @@ form.addEventListener('submit', async (event) => {
     }
 
     const formatted = formatSlot(result.start_at, result.end_at);
+    const bookingMessage = `Booked successfully for Group ${groupNo}: ${formatted.date}, ${formatted.time}.`;
+
     messageEl.className = 'message success';
-    messageEl.textContent = `Booked successfully for Group ${groupNo}: ${formatted.date}, ${formatted.time}.`;
+    messageEl.textContent = `${bookingMessage} Sending confirmation email…`;
+
     form.reset();
     await loadSlots();
+
+    try {
+      const emailResult = await invokeEdgeFunction('send-booking-confirmation', {
+        booking_id: result.booking_id,
+        student_email: studentEmail
+      });
+
+      if (emailResult?.ok) {
+        messageEl.textContent = `${bookingMessage} Confirmation email sent to ${studentEmail}.`;
+      } else {
+        messageEl.textContent = `${bookingMessage} Your slot is confirmed, but the confirmation email could not be sent.`;
+      }
+    } catch (emailErr) {
+      console.error(emailErr);
+      messageEl.textContent = `${bookingMessage} Your slot is confirmed, but the confirmation email could not be sent.`;
+    }
   } catch (err) {
     messageEl.className = 'message error';
     messageEl.textContent = err.message;
