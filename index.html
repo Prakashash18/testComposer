@@ -11,7 +11,7 @@
     <section class="card">
       <p class="eyebrow">Presentation Booking</p>
       <h1>Choose your presentation slot</h1>
-      <p class="intro">Enter your name and group number, then choose one available 20-minute slot. Once a slot is booked, it is removed for the other groups.</p>
+      <p class="intro">Enter your details and choose one available 20-minute slot. Once a slot is booked, it is removed for the other groups.</p>
 
       <div class="schedule-note" aria-label="Presentation dates">
         <strong>Presentation dates</strong>
@@ -22,6 +22,11 @@
         <label>
           Name
           <input id="student-name" name="student_name" type="text" maxlength="120" autocomplete="name" required placeholder="Enter your name" />
+        </label>
+
+        <label>
+          Email
+          <input id="student-email" name="student_email" type="email" maxlength="254" autocomplete="email" required placeholder="Enter your email for confirmation" />
         </label>
 
         <label>
@@ -46,6 +51,6 @@
       </form>
     </section>
   </main>
-  <script src="app.js?v=20260905-1"></script>
+  <script src="app.js?v=20260905-2"></script>
 </body>
 </html>
