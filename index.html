@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Presentation Slot Booking</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <p class="eyebrow">Presentation Booking</p>
+      <h1>Choose your presentation slot</h1>
+      <p class="intro">Enter your name and group number, then choose one available 20-minute slot. Once booked, the slot disappears for other groups.</p>
+
+      <form id="booking-form">
+        <label>
+          Name
+          <input id="student-name" name="student_name" type="text" maxlength="120" autocomplete="name" required placeholder="Enter your name" />
+        </label>
+
+        <label>
+          Group number
+          <select id="group-no" name="group_no" required>
+            <option value="">Select group</option>
+            <option value="1">Group 1</option><option value="2">Group 2</option><option value="3">Group 3</option>
+            <option value="4">Group 4</option><option value="5">Group 5</option><option value="6">Group 6</option>
+            <option value="7">Group 7</option><option value="8">Group 8</option><option value="9">Group 9</option>
+            <option value="10">Group 10</option><option value="11">Group 11</option>
+          </select>
+        </label>
+
+        <fieldset>
+          <legend>Available slots</legend>
+          <div id="slots" class="slots"><p class="muted">Loading available slots…</p></div>
+        </fieldset>
+
+        <button id="submit-btn" type="submit" disabled>Book selected slot</button>
+        <p id="message" class="message" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
